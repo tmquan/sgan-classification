@@ -299,6 +299,13 @@ class MSGGAN(LightningModule):
             gan_input = (gan_input
                          / gan_input.norm(dim=-1, keepdim=True)
                          * (self.latent_size ** 0.5))
+                
+        # # Log the architecture
+        # if self.current_epoch == 0 and batch_idx == 0:
+        #     self.logger.experiment.add_graph(self.dis, images)
+        #     self.logger.experiment.add_graph(self.gen, torch.randn(gan_input.shape))
+        #     self.logger.experiment.add_graph(self.classifier, torch.randn(images[-1].shape))
+
         if optimizer_idx == 0:
             g_loss = self.optimize_generator(gan_input, images, loss_fn=LSGAN(self.dis))
             tqdm_dict = {'g_loss': g_loss}
@@ -381,8 +388,8 @@ class MSGGAN(LightningModule):
         
         loss_mean = torch.stack([x[f'{prefix}_loss'] for x in outputs]).mean()
 
-        np_output = torch.cat([x[f'{prefix}_output'].squeeze_(0) for x in outputs], axis=0).to('cpu').numpy()
-        np_target = torch.cat([x[f'{prefix}_target'].squeeze_(0) for x in outputs], axis=0).to('cpu').numpy()
+        np_output = torch.cat([x[f'{prefix}_output'] for x in outputs], axis=0).squeeze_(0).to('cpu').numpy()
+        np_target = torch.cat([x[f'{prefix}_target'] for x in outputs], axis=0).squeeze_(0).to('cpu').numpy()
 
         # Casting to binary
         np_output = 1.0 * (np_output >= self.hparams.threshold).astype(np.float32)
@@ -446,7 +453,7 @@ class MSGGAN(LightningModule):
     def train_dataloader(self):
         ds_train = MultiLabelDataset(folder=self.hparams.data,
                                      is_train='train',
-                                     fname='train_v7.0.csv',
+                                     fname='train_v7.1.csv',
                                      types=self.hparams.types,
                                      pathology=self.hparams.pathology,
                                      resize=int(self.hparams.shape),
@@ -487,7 +494,7 @@ class MSGGAN(LightningModule):
         # ds_train = AugmentImageComponent(ds_train, ag_label, 1)
         ds_train = BatchData(ds_train, self.hparams.batch, remainder=True)
         if self.hparams.debug:
-            ds_train = FixedSizeData(ds_train, 2)
+            ds_train = FixedSizeData(ds_train, 1)
         ds_train = MultiProcessRunner(ds_train, num_proc=4, num_prefetch=16)
         ds_train = PrintData(ds_train)
         ds_train = MapData(ds_train,
@@ -515,7 +522,7 @@ class MSGGAN(LightningModule):
         """
         ds_valid = MultiLabelDataset(folder=self.hparams.data,
                                      is_train='valid',
-                                     fname='valid_v7.0.csv',
+                                     fname='valid_v7.1.csv',
                                      types=self.hparams.types,
                                      pathology=self.hparams.pathology,
                                      resize=int(self.hparams.shape),)
@@ -538,7 +545,7 @@ class MSGGAN(LightningModule):
     def test_dataloader(self):
         ds_test = MultiLabelDataset(folder=self.hparams.data,
                                      is_train='valid',
-                                     fname='test_v7.0.csv',
+                                     fname='test_v7.1.csv',
                                      types=self.hparams.types,
                                      pathology=self.hparams.pathology,
                                      resize=int(self.hparams.shape),
@@ -572,7 +579,7 @@ class MSGGAN(LightningModule):
                             help='mini-batch size (default: 256), this is the total '
                                  'batch size of all GPUs on the current node when '
                                  'using Data Parallel or Distributed Data Parallel')
-        parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
+        parser.add_argument('--lr', '--learning-rate', default=1e-4, type=float,
                             metavar='LR', help='initial learning rate', dest='lr')
         parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
         parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")

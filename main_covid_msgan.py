@@ -299,6 +299,13 @@ class MSGGAN(LightningModule):
             gan_input = (gan_input
                          / gan_input.norm(dim=-1, keepdim=True)
                          * (self.latent_size ** 0.5))
+
+        # # Log the architecture
+        # if self.current_epoch == 0 and batch_idx == 0:
+        #     self.logger.experiment.add_graph(self.dis, images)
+        #     self.logger.experiment.add_graph(self.gen, torch.randn(gan_input.shape))
+        #     self.logger.experiment.add_graph(self.classifier, torch.randn(images[-1].shape))
+
         if optimizer_idx == 0:
             g_loss = self.optimize_generator(gan_input, images, loss_fn=LSGAN(self.dis))
             tqdm_dict = {'g_loss': g_loss}
@@ -381,8 +388,8 @@ class MSGGAN(LightningModule):
         
         loss_mean = torch.stack([x[f'{prefix}_loss'] for x in outputs]).mean()
 
-        np_output = torch.cat([x[f'{prefix}_output'].squeeze_(0) for x in outputs], axis=0).to('cpu').numpy()
-        np_target = torch.cat([x[f'{prefix}_target'].squeeze_(0) for x in outputs], axis=0).to('cpu').numpy()
+        np_output = torch.cat([x[f'{prefix}_output'] for x in outputs], axis=0).squeeze_(0).to('cpu').numpy()
+        np_target = torch.cat([x[f'{prefix}_target'] for x in outputs], axis=0).squeeze_(0).to('cpu').numpy()
 
         # Casting to binary
         np_output = 1.0 * (np_output >= self.hparams.threshold).astype(np.float32)
@@ -573,7 +580,7 @@ class MSGGAN(LightningModule):
                             help='mini-batch size (default: 256), this is the total '
                                  'batch size of all GPUs on the current node when '
                                  'using Data Parallel or Distributed Data Parallel')
-        parser.add_argument('--lr', '--learning-rate', default=1e-3, type=float,
+        parser.add_argument('--lr', '--learning-rate', default=1e-4, type=float,
                             metavar='LR', help='initial learning rate', dest='lr')
         parser.add_argument("--b1", type=float, default=0.5, help="adam: decay of first order momentum of gradient")
         parser.add_argument("--b2", type=float, default=0.999, help="adam: decay of first order momentum of gradient")
